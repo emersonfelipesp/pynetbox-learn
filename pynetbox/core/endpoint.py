@@ -587,10 +587,9 @@ class Endpoint:
             token=self.api.token,
             http_session=self.api.http_session,
         ).options()
-
-        actions = req.get("actions", {})
-        post_data = actions.get("POST") or actions.get("PUT")
-        if post_data is None:
+        try:
+            post_data = req["actions"]["POST"]
+        except KeyError:
             raise ValueError(
                 "Unexpected format in the OPTIONS response at {}".format(self.url)
             )

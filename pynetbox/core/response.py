@@ -281,6 +281,10 @@ class Record:
         self._init_cache = []
         self.api = api
         self.default_ret = Record
+        # This line of code is setting the `endpoint` attribute of the object.
+        # It checks if the `values` dictionary is provided and contains a non-empty "url" key.
+        # If so, it calls the `_endpoint_from_url` method with the URL from `values` to determine the endpoint.
+        # If the `values` dictionary is not provided or doesn't contain a valid "url", it defaults to using the `endpoint` parameter passed to the constructor.
         self.endpoint = (
             self._endpoint_from_url(values["url"])
             if values and "url" in values and values["url"]
@@ -308,6 +312,20 @@ class Record:
         raise AttributeError('object has no attribute "{}"'.format(k))
 
     def __iter__(self):
+        """
+        Iterates over the attributes stored in the _init_cache of the Record object.
+        
+        This method yields key-value pairs for each attribute in the _init_cache. 
+        If the attribute is an instance of Record, it converts it to a dictionary 
+        before yielding. If the attribute is a list of Record instances, it converts 
+        each Record in the list to a dictionary. Otherwise, it yields the attribute 
+        as is.
+        
+        Yields:
+            tuple: A key-value pair where the key is the attribute name and the value 
+            is either a dictionary representation of a Record, a list of dictionaries 
+            if the attribute is a list of Records, or the attribute value itself.
+        """
         for i in dict(self._init_cache):
             cur_attr = getattr(self, i)
             if isinstance(cur_attr, Record):
@@ -320,9 +338,21 @@ class Record:
                 yield i, cur_attr
 
     def __getitem__(self, k):
+        """
+        Retrieves the value of an attribute from the Record object.
+
+        This method allows accessing the value of an attribute using the square bracket notation.
+        It returns the value of the attribute specified by the key `k`.
+        """
         return dict(self)[k]
 
     def __str__(self):
+        """
+        Returns a string representation of the Record object.
+
+        This method returns the value of the `name`, `label`, or `display` attribute,
+        or an empty string if none of these attributes are present.
+        """
         return (
             getattr(self, "name", None)
             or getattr(self, "label", None)
@@ -331,29 +361,128 @@ class Record:
         )
 
     def __repr__(self):
+        """
+        Returns a string representation of the Record object.
+
+        This method returns the value of the `name`, `label`, or `display` attribute,
+        or an empty string if none of these attributes are present.
+        """
         return str(self)
 
     def __getstate__(self):
+        """
+        Prepares the Record object for pickling.
+
+        This method is used when the Record object is being serialized
+        using the pickle module. It returns the object's internal state
+        dictionary (__dict__) which contains all instance attributes
+        including internal implementation details.
+
+        Note: This is different from the dictionary representation of the
+        Record object, which can be obtained using dict(self) or __iter__.
+
+        Example:
+            >>> import pickle
+            >>> device = nb.dcim.devices.get(1)
+            >>> # Serialize the device object
+            >>> with open('device.pickle', 'wb') as f:
+            ...     pickle.dump(device, f)
+        """
         return self.__dict__
 
     def __setstate__(self, d):
+        """
+        Restores the Record object's state after unpickling.
+
+        This method is called when the object is being unpickled. It updates
+        the object's internal state with the previously saved state.
+
+        Example:
+            >>> import pickle
+            >>> # Unserialize the device object
+            >>> with open('device.pickle', 'rb') as f:
+            ...     device = pickle.load(f)
+        """
         self.__dict__.update(d)
 
     def __key__(self):
+        """
+        Generates a unique key for the Record object.
+
+        This method is used to create a unique identifier for the Record object
+        based on its endpoint name and ID. If the object has no ID, it returns
+        just the endpoint name.
+
+        Returns:
+            tuple: A tuple containing (endpoint_name, id) if id exists,
+                   otherwise just (endpoint_name,)
+
+        Example:
+            >>> device = nb.dcim.devices.get(1)
+            >>> device.__key__()
+            ('devices', 1)
+        """
         if hasattr(self, "id"):
             return (self.endpoint.name, self.id)
         else:
             return self.endpoint.name
 
     def __hash__(self):
+        """
+        Generates a hash value for the Record object.
+
+        This method allows Record objects to be used in sets and as dictionary keys.
+        The hash is based on the object's key (endpoint name and ID).
+
+        Returns:
+            int: A hash value for the object
+
+        Example:
+            >>> device1 = nb.dcim.devices.get(1)
+            >>> device2 = nb.dcim.devices.get(1)
+            >>> device_set = {device1, device2}  # Only one device will be in the set
+        """
         return hash(self.__key__())
 
     def __eq__(self, other):
+        """
+        Compares two Record objects for equality.
+
+        Two Record objects are considered equal if they have the same endpoint name
+        and ID. This method is used for comparison operations and set operations.
+
+        Args:
+            other: Another object to compare with
+
+        Returns:
+            bool: True if objects are equal, False otherwise
+
+        Example:
+            >>> device1 = nb.dcim.devices.get(1)
+            >>> device2 = nb.dcim.devices.get(1)
+            >>> device1 == device2
+            True
+        """
         if isinstance(other, Record):
             return self.__key__() == other.__key__()
         return NotImplemented
 
     def _add_cache(self, item):
+        """
+        Adds an item to the initialization cache of the Record object.
+
+        This internal method is used during object initialization to store
+        the initial values of attributes. It processes the value through
+        get_return() before adding it to the cache.
+
+        Args:
+            item (tuple): A (key, value) pair to add to the cache
+
+        Example:
+            >>> device = nb.dcim.devices.get(1)
+            >>> # The _add_cache method is called internally during initialization
+            >>> # to store the initial state of the device
+        """
         key, value = item
         self._init_cache.append((key, get_return(value)))
 
