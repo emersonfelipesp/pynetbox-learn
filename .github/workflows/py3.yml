@@ -6,22 +6,46 @@ on:
     branches:
       - master
 
+permissions:
+  contents: read
+
+concurrency:
+  group: python-netbox-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
-
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     strategy:
+      fail-fast: false
       matrix:
         python: ["3.10", "3.11", "3.12"]
         netbox: ["4.0", "4.1", "4.2"]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout complete source metadata
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
+            requirements.txt
+            setup.py
+
+      - name: Verify ephemeral integration prerequisites
+        run: |
+          set -euo pipefail
+          git --version
+          docker info
+          docker compose version
 
       - name: Install dev requirements
         run: pip install -r requirements-dev.txt .
@@ -31,3 +55,17 @@ jobs:
           
       - name: Run Tests
         run: pytest --netbox-versions=${{ matrix.netbox }}
+
+  complete:
+    name: Python and NetBox matrix complete
+    if: ${{ always() }}
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all nine original rows
+        env:
+          RESULT: ${{ needs.build.result }}
+        run: |
+          set -euo pipefail
+          [[ "$RESULT" == success ]]
