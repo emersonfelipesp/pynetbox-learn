@@ -14,6 +14,11 @@ runner with Git, Docker and Compose available. Never point these fixtures at a
 managed NetBox system or a shared Docker host: their cleanup intentionally
 matches test container, network and volume names.
 
+The integration fixture explicitly starts Compose in detached mode, then uses
+its existing 300-second NetBox HTTP readiness check. Do not let a dependency's
+shorter default container-health wait preempt first-boot migrations. Keep all
+real API tests, the existing readiness deadline and normal cleanup intact.
+
 Only superseded pull-request runs cancel. Master push quality finishes
 independently. Python and NetBox matrix complete succeeds only after every
 original matrix row succeeds. A skipped, cancelled or failed producer is not a

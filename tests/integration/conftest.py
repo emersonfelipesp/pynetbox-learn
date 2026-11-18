@@ -503,6 +503,17 @@ def pytest_generate_tests(metafunc):
 
 
 @pytest.fixture(scope="session")
+def docker_setup() -> list[str]:
+    """Start containers before the existing bounded NetBox API readiness check.
+
+    pytest-docker's Compose health wait can fail during first-boot migrations
+    before docker_netbox_service reaches its established 300-second HTTP check.
+    Keep one application readiness owner rather than adding another deadline.
+    """
+    return ["up --build -d"]
+
+
+@pytest.fixture(scope="session")
 def docker_cleanup(pytestconfig):
     """Override the docker cleanup command for the containsers used in testing."""
     # pytest-docker does not always clean up after itself properly, and sometimes it
